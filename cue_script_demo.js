@@ -239,7 +239,7 @@ timeline.push({
     type: jsPsychSurveyText,
     questions: [{ prompt: "Please enter <strong>Participant ID:</strong>", name: 'participant_id', required: true }],
     on_finish: data => {
-      experimentData.participant = data.response.participant_id.trim();
+      experimentData.participant = data.response.participant_id.trim().toUpperCase();
 
    // Add participant ID as a property for all jsPsych data
     jsPsych.data.addProperties({ participant_id: experimentData.participant });
