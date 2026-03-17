@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;">
+
+  <title>Memory Experiment</title>
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-call-function.js"></script>
+  <script src="jspsych/plugin-html-button-response.js"></script>
+  <script src="jspsych/plugin-survey-likert.js"></script>
+  <script src="jspsych/plugin-instructions.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/plugin-survey-text.js"></script>
+  <script src="jspsych/plugin-survey-multi-choice.js"></script>
+  <link href="jspsych/jspsych.css" rel="stylesheet" />
+
+    <style>
+       html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: white; /* optional background color */
+    }
+
+     #jspsych-target {
+      width: 100%;
+    }
+
+    #jspsych-content {
+      max-width: 800px;
+      text-align: center;
+    }
+
+    .jspsych-survey-likert-statement {
+      text-align: center;
+    }
+
+    .jspsych-btn {
+      margin: 10px;
+    }
+
+  /* Hide required field asterisks in jsPsych surveys */
+  .jspsych-survey-multi-choice .required,
+.jspsych-survey-text .required,
+.jspsych-survey-likert .required,
+.jspsych-survey-multi-select .required {
+  display: none !important;
+}
+  </style>
+
+<script>
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('.required').forEach(el => {
+      el.textContent = '';
+    });
+  });
+
+  window.addEventListener('load', () => {
+    const target = document.getElementById('jspsych-target');
+    if (target) {
+      observer.observe(target, {
+        childList: true,
+        subtree: true
+      });
+    }
+  });
+</script>
+
+</head>
+<body>
+  <div id="jspsych-target"></div>
+  <script src="cue_script_demo.js"></script>
+</body>
+
+</html>

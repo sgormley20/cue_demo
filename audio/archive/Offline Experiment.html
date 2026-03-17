@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Offline Experiment</title>
+
+  <!-- Load jsPsych and plugins locally -->
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/plugin-survey-html-form.js"></script>
+  <script src="jspsych/papaparse.min.js"></script>
+  <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" />
+</head>
+<body></body>
+
+<script>
+  // Setup jsPsych
+  const jsPsych = initJsPsych({
+    on_finish: function() {
+      const participantID = jsPsych.data.get().first(1).values()[0].participant_id;
+      console.log("Participant ID:", participantID);
+
+      Papa.parse("Randomisation.csv", {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const data = results.data;
+          console.log("CSV loaded:", data);
+
+          const row = data.find(r => r.ID.trim().toLowerCase() === participantID.trim().toLowerCase());
+
+          if (!row) {
+            alert("ID not found in randomisation file.");
+            return;
+          }
+
+          const randomisation = row.Randomisation.trim().toUpperCase();
+
+          // Define trials
+          const welcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Welcome to the experiment. Press any key to begin."
+          };
+
+          const random_1 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Randomisation 1."
+          };
+
+          const random_2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Randomisation 2."
+          };
+
+          const end = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "This is the end of the experiment."
+          };
+
+          const fullTimeline = [welcome];
+
+          if (randomisation === "A") {
+            fullTimeline.push(random_1);
+          } else if (randomisation === "B") {
+            fullTimeline.push(random_2);
+          } else {
+            alert("Randomisation value not recognized.");
+            return;
+          }
+
+          fullTimeline.push(end);
+
+          jsPsych.run(fullTimeline);
+        }
+      });
+    }
+  });
+
+  // Participant ID input trial
+  const getID = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: "<p>Please enter your ID:</p>",
+    html: '<p><label>ID: <input name="participant_id" type="text" required></label></p>',
+    on_finish: function(data) {
+      console.log("Raw data.response:", data.response); // Should be an object
+      try {
+        const participantID = data.response.participant_id;
+        if (!participantID || participantID.trim() === "") {
+          alert("ID is empty.");
+          return;
+        }
+        jsPsych.data.addProperties({ participant_id: participantID.trim() });
+        console.log("Participant ID set:", participantID);
+      } catch (e) {
+        alert("Could not process ID. Please reload and try again.");
+        console.error("ID processing error:", e);
+      }
+    }
+  };
+
+  // Run the ID form first
+  jsPsych.run([getID]);
+</script>
+</html>

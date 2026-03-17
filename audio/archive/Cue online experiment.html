@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Randomisation Experiment</title>
+
+    <!-- jsPsych core and plugins -->
+    <script src="https://unpkg.com/jspsych@8.2.1"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@2.1.0"></script>
+    <link href="https://unpkg.com/jspsych@8.2.1/css/jspsych.css" rel="stylesheet" type="text/css" />
+
+    <!-- PapaParse for CSV reading -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+  <body></body>
+
+  <script>
+    const jsPsych = initJsPsych();
+
+    const csv_url = "https://raw.githubusercontent.com/sgormley20/cue_example/main/Randomisation.csv";
+
+    const get_id = {
+      type: jsPsychSurveyHtmlForm,
+      preamble: '<p>Please enter your ID number:</p>',
+      html: '<p><input name="participantID" type="text" required></p>',
+      on_finish: function(data) {
+        const enteredID = data.response.participantID.trim();
+
+        Papa.parse(csv_url, {
+          download: true,
+          header: true,
+          complete: function(results) {
+            const matchedRow = results.data.find(row => row.ID.trim() === enteredID);
+
+            if (!matchedRow) {
+              jsPsych.run([{
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: "ID not found in the CSV. Please refresh and try again."
+              }]);
+              return;
+            }
+
+            const condition = matchedRow.Randomisation.trim().toUpperCase();
+            let randomisation_trial;
+
+            if (condition === "A") {
+              randomisation_trial = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: "Randomisation Procedure 1"
+              };
+            } else if (condition === "B") {
+              randomisation_trial = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: "Randomisation Procedure 2"
+              };
+            } else if (condition === "C") {
+              randomisation_trial = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: "Randomisation Procedure 3"
+              };
+            } else {
+              randomisation_trial = {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: "Randomisation value not recognized. Please check CSV."
+              };
+            }
+
+            const end_trial = {
+              type: jsPsychHtmlKeyboardResponse,
+              stimulus: "This is the end of the experiment. Thank you!"
+            };
+
+            jsPsych.run([randomisation_trial, end_trial]);
+          }
+        });
+      }
+    };
+
+    jsPsych.run([get_id]);
+  </script>
+</html>

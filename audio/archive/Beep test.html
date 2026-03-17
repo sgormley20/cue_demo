@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Beep Test</title>
+  
+  <!-- Load jsPsych core + required plugins (all from local folder) -->
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-html-button-response.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <link href="jspsych/jspsych.css" rel="stylesheet" />
+</head>
+<body></body>
+<script>
+  // Initialize jsPsych
+  const jsPsych = initJsPsych({
+    on_finish: () => jsPsych.data.displayData()
+  });
+
+  // First trial with button that beeps
+  const beepTrial = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div style="max-width: 600px; margin: auto; text-align: center; font-size: 18px;">
+        <p>When you are ready, press Continue.</p>
+      </div>
+    `,
+    choices: ['Continue'],
+    on_finish: () => {
+      // Create beep with Web Audio API
+      const context = jsPsych.pluginAPI.audioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = "sine";          // waveform
+      oscillator.frequency.value = 440;  // Hz (A4 tone)
+      gain.gain.value = 0.2;             // volume
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.2); // beep duration (seconds)
+    }
+  };
+
+  // Second trial so you can see it advances
+  const nextTrial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<p>Beep finished! Press any key to end.</p>`
+  };
+
+  // Build timeline
+  const timeline = [beepTrial, nextTrial];
+
+  // Run experiment
+  jsPsych.run(timeline);
+</script>
+</html>

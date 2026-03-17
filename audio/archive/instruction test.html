@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-line Text Example</title>
+
+  <!-- Load jsPsych -->
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+    <script src="jspsych/plugin-survey-likert.js"></script>
+  <link href="jspsych/jspsych.css" rel="stylesheet" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f8f8f8;
+    }
+  </style>
+</head>
+<body></body>
+
+<script>
+  const jsPsych = initJsPsych();
+
+  const timeline = [];
+
+  // Trial with multiple lines of text
+  const instructionTrial = {
+    type: jsPsychSurveyLikert,
+    questions:[{
+  prompt: "<p> How vivid was the memory? </p> <p> Vividness – how clear, detailed or crisp was the memory? </p>",
+  labels:['1<br><small>Not at all Vivid</small>', '2<br><small>A little Vivid</small>', '3<br><small>Somewhat Vivid</small>', '4<br><small>Moderately Vivid</small>', '5<br><small>Considerably Vivd</small>', '6<br><small>Very Vivid</small>', '7<br><small>Extremely Vivid </small>'],
+    required: true
+  }]
+
+};
+
+  timeline.push(instructionTrial);
+
+  jsPsych.run(timeline);
+</script>
+</html>

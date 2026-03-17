@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Offline Test Experiment</title>
+  <style>
+    /* Minimal jsPsych-like styling */
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    button {
+      font-size: 18px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    h1 {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>THIS WORKS OFFLINE</h1>
+  <button id="ok-btn">OK</button>
+
+  <script>
+    // Simple script for button interaction
+    document.getElementById('ok-btn').addEventListener('click', () => {
+      alert('Button clicked — experiment logic would run here.');
+    });
+  </script>
+
+</body>
+</html>

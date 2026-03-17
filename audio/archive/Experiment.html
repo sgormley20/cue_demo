@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="https://unpkg.com/jspsych@8.2.1"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+    <link href="https://unpkg.com/jspsych@8.2.1/css/jspsych.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body></body>
+  <script>
+
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych();
+
+    /* create timeline */
+    var timeline = [];
+
+    /* define welcome message trial */
+    var welcome = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: "Welcome to the experiment. Press any key to begin."
+    };
+    timeline.push(welcome);
+
+    var random_1 = {
+        type: jsPsychHtmlKeyboardResponse, 
+        stimulus: "Randomisation 1."
+    };
+    timeline.push(random_1);
+
+    var random_2 = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: "Randomisation 2."
+    }; 
+    timeline.push(random_2);
+
+    var end = { 
+        type: jsPsychHtmlKeyboardResponse, 
+        stimulus: "This is the end of the experiment."
+    }
+timeline.push(end);
+    /* start the experiment */
+    jsPsych.run(timeline);
+
+  </script>
+</html>
