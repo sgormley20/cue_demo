@@ -1,4 +1,15 @@
-const PASSWORD = 'yourFixedPasswordHere';
+console.log("DEMO FILE LOADED");
+const encoded = [239,176,173,194,187,168,248,217,243,177,197,201,255,209,190,170,251,221,186,228,199,191,254,200];
+const key = 137;
+
+const PASSWORD = String.fromCharCode(
+  ...encoded.map(n => n ^ key)
+);
+
+const APPROVED_EXPERIMENTER_IDS = [
+  "AB"
+];
+
 
 // 1. Define experimentData and wrap it immediately for automatic saving
 function createResponseProxy(obj) {
@@ -82,15 +93,26 @@ function attachAudioButton() {
   if (!btn || !audio) return;
 
   btn.addEventListener("click", (e) => {
-    e.stopPropagation();   // prevents jsPsych detecting the click
+    e.stopPropagation();
     e.preventDefault();
 
     audio.currentTime = 0;
     audio.play();
 
-    document.body.focus();
+    setTimeout(() => {
+      const jsPsychTarget =
+        document.getElementById("jspsych-target") ||
+        document.querySelector(".jspsych-display-element");
+
+      if (jsPsychTarget) {
+        if (!jsPsychTarget.hasAttribute("tabindex")) {
+          jsPsychTarget.setAttribute("tabindex", "-1");
+        }
+        jsPsychTarget.focus();
+      }
+    }, 0);
   });
-};
+}
 
 function recordBlockStart() {
   const now = new Date().toLocaleString();
@@ -127,13 +149,9 @@ function instructionScreen(text, audioFile = null, continueText = "Press any key
 };
 
 const jsPsych = initJsPsych({
-  display_element: 'jspsych-target',
-    on_finish: () => {
-    console.log("Experiment finished");
-  }
+  display_element: 'jspsych-target'
 });
 const timeline = [];
-
 
 
 //  Main controller function
@@ -234,16 +252,103 @@ timeline.push({
   }
 });
 
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="max-width: 600px; margin: auto; text-align: center; font-size: 18px;">
+      <p>Please enter your <strong>Experimenter ID</strong>:</p>
+      <input id="exp-id-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-size: 18px; text-align: center;" autofocus />
+      <p style="color:red;" id="error-message"></p>
+      <button id="continue-button" style="margin-top: 20px; font-size: 18px;">Continue</button>
+    </div>
+  `,
+  choices: "NO_KEYS",
+  on_load: () => {
+    const input = document.getElementById("exp-id-input");
+    const button = document.getElementById("continue-button");
+    const error = document.getElementById("error-message");
+
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^-a-zA-Z0-9]/g, '').toUpperCase();
+    });
+
+    const submit = () => {
+      const value = input.value.trim().toUpperCase();
+
+      error.textContent = "";
+
+      if (!value) {
+        error.textContent = "Please enter ID.";
+        return;
+      }
+
+      if (!APPROVED_EXPERIMENTER_IDS.includes(value)) {
+        error.textContent = "Invalid ID. Please check and try again.";
+        return;
+      }
+
+      jsPsych.finishTrial({ experimenter_ID: value });
+    };
+
+    button.addEventListener("click", submit);
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+
+    input.focus();
+  }
+});
+
   // Step 2: Participant ID
-  timeline.push({
-    type: jsPsychSurveyText,
-    questions: [{ prompt: "Please enter <strong>Participant ID:</strong>", name: 'participant_id', required: true }],
-    on_finish: data => {
-      experimentData.participant = data.response.participant_id.trim().toUpperCase();
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <div style="max-width: 600px; margin: auto; text-align: center; font-size: 18px;">
+      <p>Please enter <strong>Participant ID:</strong></p>
+      <span style="font-size:14px; color:#555;">Enter in study format (e.g., S1-001)</span>
+      <input id="participant-id-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="font-size: 18px; text-align: center;" autofocus />
+      <p style="color:red;" id="error-message"></p>
+      <button id="continue-button" style="margin-top: 20px; font-size: 18px;">Continue</button>
+    </div>
+  `,
+  choices: "NO_KEYS",
+  on_load: () => {
+    const input = document.getElementById("participant-id-input");
+    const button = document.getElementById("continue-button");
+    const error = document.getElementById("error-message");
 
-   // Add participant ID as a property for all jsPsych data
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^-a-zA-Z0-9]/g, '').toUpperCase();
+    });
+
+    const submit = () => {
+      const value = input.value.trim().toUpperCase();
+
+      if (!value) {
+        error.textContent = "Please enter Participant ID.";
+        return;
+      }
+
+      if (!/^S\d-\d{3}$/.test(value)) {
+        error.textContent = "Participant ID must be in the format S1-001.";
+        return;
+      }
+
+      jsPsych.finishTrial({ participant_id: value });
+    };
+
+    button.addEventListener("click", submit);
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+
+    input.focus();
+  },
+  on_finish: data => {
+    experimentData.participant = data.participant_id.trim().toUpperCase();
     jsPsych.data.addProperties({ participant_id: experimentData.participant });
-
   }
 });
 
@@ -327,7 +432,7 @@ timeline.push({
 
 // Step 5: Run initials + ID to get participant before loading files
 
-await jsPsych.run(timeline.slice(0, 5));
+await jsPsych.run(timeline.slice(0, 6));
 
 try {
   let encryptedText;
@@ -373,58 +478,78 @@ try {
     };
   });
 
-  // rest of your timeline building continues here...
+  setNeutralMemoryFromSession();
 
-    // Step 7: Handover
-      timeline.push(
-        instructionScreen(
-     '<p>Press any key and hand the laptop to the participant.</p>'
-      ));
-
-    
-    // Step 8: Add instructions
-    timeline.push({
-      ...instructionScreen( `
-      <p>In the next section, we will ask you to bring a memory to mind. </p>
-      <p>This will either be an intrusive memory of the traumatic event OR a neutral memory.</p> 
-      <p>These are the memories you discussed with the researcher on visit 1.</p>
-`,
-"audio/page_1.wav"),
-    on_finish: () => {
-    // Save the wall clock time when key was pressed
-    experimentData.experiment_start = new Date().toLocaleString();
+  timeline.push({
+  type: jsPsychSurveyMultiChoice,
+  questions: [{
+    prompt: `<p>Please select the traumatic memory you wish to work with today:</p>`,
+    name: "trauma_choice",
+    options: experimentData.memory_data.map(m => m.trauma),
+    required: true
+  }],
+  on_finish: data => {
+    const selected = data.response["trauma_choice"];
+    experimentData.selected_trauma_index =
+      experimentData.memory_data.findIndex(m => m.trauma === selected);
   }
 });
 
+  // rest of your timeline building continues here...
 timeline.push({
-      ...instructionScreen(`
+  timeline: [
+    {
+      ...instructionScreen(
+        `
+        <p>In the next section, we will ask you to bring a memory to mind. </p>
+        <p>This will either be an intrusive memory of the traumatic event OR a neutral memory.</p> 
+        <p>These are the memories you discussed with the researcher on visit 1.</p>
+        `,
+        "audio/page_1.wav"
+      ),
+      on_finish: () => {
+        experimentData.experiment_start = new Date().toLocaleString();
+      }
+    },
+
+    instructionScreen(
+      `
       <p>On Visit-1, we asked you to give each neutral and intrusive memory a title or label.</p>
       <p>These <strong>labels/titles</strong> were going to be <strong>your reminders</strong> for specific neutral or intrusive traumatic memories.</p>
-      </div>
-`,
-  "audio/page_2.wav"
-      )
-});
+      `,
+      "audio/page_2.wav"
+    ),
 
-
-timeline.push({
-      ...instructionScreen( `
-
+    instructionScreen(
+      `
       <p>In the next section, you will see <u><strong>one</strong></u> of these reminders.</p>
-      <p> When you see the reminder, you are asked to <u><strong><em>briefly</em></strong></u> bring the associated memory to mind until you can see it clearly in your mind’s eye.</p>
-`,
-    "audio/page_3.wav"
-      )
+      <p>When you see the reminder, you are asked to <u><strong><em>briefly</em></strong></u> bring the associated memory to mind until you can see it clearly in your mind’s eye.</p>
+      `,
+      "audio/page_3.wav"
+    ),
+
+    instructionScreen(
+      `
+      <p>Please wait for the experimenter's instructions.</p>
+      `,
+      "audio/page_4.wav"
+    )
+  ],
+  conditional_function: () => experimentData.session_number === 1
 });
 
 
 timeline.push({
-    ...instructionScreen(`
-   
-      <p>Please wait for the experimenter's instructions.</p>
-   `,
-    "audio/page_4.wav"
-     )
+  type: jsPsychCallFunction,
+  func: () => {
+    if (experimentData.selected_trauma_index == null) {
+      throw new Error("Trauma memory not selected");
+    }
+
+    if (experimentData.selected_neutral_index == null) {
+      throw new Error("Neutral memory not set");
+    }
+  }
 });
 
    // Step 9: Add blocks in correct order/
@@ -443,68 +568,23 @@ timeline.push({
       type: jsPsychHtmlButtonResponse,
       stimulus: `
       <p>Please press the button to end the experiment.</p>
-        ${audioButtonHtml("audio/end.wav")}
       `,
-      choices: ['End'],
-      on_load: attachAudioButton,   
+      choices: ['End'],  
     on_finish: () => {
+      alert("Experiment finished.");
         console.log('Done.');
       }
     });
-//Save Data 
-function buildMemoryOutput(type) {
 
-  const safeIndex = (val) => val != null ? val + 1 : null;
 
-  const vivid = experimentData.responses[`${type}_likert_vivid`];
-  const posNeg = experimentData.responses[`${type}_likert_pos_neg`];
-  const intensity = experimentData.responses[`${type}_likert_intensity`];
-  const selected = experimentData[`selected_${type}_index`];
+console.log("participant:", experimentData.participant);
+console.log("session:", experimentData.session_number);
+console.log("group:", experimentData.randomisation_group);
+console.log("memory rows:", experimentData.memory_data.length);
+console.log("timeline length before second run:", timeline.length);
 
-  return {
-    [`${type}_selected`]: safeIndex(selected),
-    [`${type}_prompt`]: experimentData[`${type}_prompt`],
-    [`${type}_memory_reminder`]: experimentData[`${type}_memory_reminder`],
-
-    [`${type}_likert_vivid`]: safeIndex(vivid),
-    [`${type}_likert_vivid_label`]: vivid != null ? likert_vivid_labels[vivid] : null,
-
-    [`${type}_likert_pos_neg`]: safeIndex(posNeg),
-    [`${type}_likert_pos_neg_label`]: posNeg != null ? likert_pos_neg_labels[posNeg] : null,
-
-    [`${type}_likert_intensity`]: safeIndex(intensity),
-    [`${type}_likert_intensity_label`]: intensity != null ? likert_intensity_labels[intensity] : null
-  };
-};
-    // Step 11: Save data
-timeline.push({
-  type: jsPsychCallFunction,
-  func: () => {
-    experimentData.end_time = new Date().toLocaleString();
-
-    const output = {
-  experimenter_name: experimentData.experimenter,
-  job_role: experimentData.job_role,
-  participant_id: experimentData.participant,
-  session_number: experimentData.session_number,
-
-  start_time: experimentData.start_time,
-  end_time: experimentData.end_time,
-  experiment_start: experimentData.experiment_start,
-  first_block_start: experimentData.first_block_start,
-  second_block_start: experimentData.second_block_start,
-
-  // trauma first, neutral second
-  ...buildMemoryOutput("trauma"),
-  ...buildMemoryOutput("neutral")
-};
-     
-// Send to server for saving as CSV
-console.log("Final experiment data:", output);
-  }
-});
 // Step 12: Run the rest of the experiment
-await jsPsych.run(timeline.slice(5));
+await jsPsych.run(timeline.slice(6));
 
 } catch (err) {
   alert("Setup failed: " + err.message);
@@ -555,8 +635,18 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
+function setNeutralMemoryFromSession() {
+  const index = experimentData.session_number - 1;
+
+  if (!experimentData.memory_data[index]) {
+    throw new Error("Invalid session → no neutral memory");
+  }
+
+  experimentData.selected_neutral_index = index;
+}
+
 //Likert Helper
-function buildLikertTrial({ type, nameSuffix, prompt, labels, audio, labelArray }) {
+function buildLikertTrial({ type, nameSuffix, prompt, labels, labelArray }) {
   const key = `${type}_${nameSuffix}`;
 
   return {
@@ -565,19 +655,18 @@ function buildLikertTrial({ type, nameSuffix, prompt, labels, audio, labelArray 
       name: key,
       prompt: `
         ${prompt}
-        ${audioButtonHtml(audio)}
       `,
       labels: labels,
       required: true
     }],
-    on_load: attachAudioButton,
     on_finish: data => {
       experimentData.responses[key] = data.response[key];
       experimentData.responses[`${key}_label`] = labelArray[data.response[key]];
     }
   };
 }
-// NEW GENERIC BLOCK (TEST VERSION)
+
+// Create Memory Block
 function createMemoryBlock(type) {
   const isTrauma = type === "trauma";
 
@@ -585,27 +674,25 @@ function createMemoryBlock(type) {
   const promptKey = `${type}_prompt`;
   const reminderKey = `${type}_memory_reminder`;
 
-  const choiceName = `${type}_choice`;
-
   const intro1Text = isTrauma
     ? `
-      <p>You will next see a word/phrase to remind you of your <strong>traumatic intrusive memory</strong></p>
-      <p>When you see the reminder word or phrase, <em>briefly</em> bring the intrusive memory to mind <u><strong><em>until you see it clearly in your mind's eye.</em></strong></u></p>
+      <p>You will next see a reminder of one of the <strong>traumatic intrusive memory</strong> you told us about at your first visit. </p>
+      <p>When you see the reminder word or phrase, <em>briefly</em> bring the associated intrusive memory to mind <u><strong><em>until you see it clearly in your mind's eye.</em></strong></u></p>
       <p>Some people find it helpful to close their eyes to help them remember clearly.</p>
     `
     : `
-      <p>You will next see a word/phrase to remind you of your <strong>neutral memory</strong></p>
-      <p>When you see the reminder word or phrase, <em>briefly</em> bring the memory to mind <u><strong><em>until you see it clearly in your mind's eye.</em></strong></u></p>
+      <p>You will next see a reminder of one of the <strong>neutral memories</strong you told us about at your first visit.</p>
+      <p> When you see the reminder word or phrase, <em>briefly</em> bring the associated memory to mind <u><strong><em>until you see it clearly in your mind’s eye.</em></strong></u></p>
       <p>Some people find it helpful to close their eyes to help them remember clearly.</p>
     `;
 
   const intro2Text = isTrauma
     ? `<p>Please remember, we only want to 'jog your memory'. We do not want you to become fully absorbed in the memory or to become very upset.</p>`
-    : `<p>Please remember, we are asking you to <strong>recall a <u>neutral memory</u></strong>, not an emotionally upsetting one. This will be one of the neutral memories you told us about on Visit 1.</p>`;
+    : `<p>Please remember, we are asking you to <strong>recall</strong> one of your neutral memories, not an upsetting one.</p>`;
 
   const intro3Text = isTrauma
     ? `
-      <p>When the reminder word appears, please bring the associated memory to mind until you see it clearly in your mind's eye.</p>
+      <p>When the reminder word or phrase appears, please bring the associated intrusive memory to mind until you see it clearly in your mind’s eye. </p>
       <p>Hold the memory in your mind for a few seconds until you connect with it emotionally, before allowing it to fade away.</p>
       <p>You will then be asked to provide some ratings for the memory.</p>
     `
@@ -626,94 +713,69 @@ function createMemoryBlock(type) {
     instructionScreen(intro1Text, `audio/${audioPrefix}_1.wav`, "If you are ready, please press any key to continue."),
     instructionScreen(intro2Text, `audio/${audioPrefix}_2.wav`, "If you are ready, please press any key to continue."),
     instructionScreen(intro3Text, `audio/${audioPrefix}_3.wav`, "If you are ready, please press any key to continue."),
-
-    {
-      type: jsPsychSurveyMultiChoice,
-      questions: [{
-        prompt: `<p>Please select the ${type} memory you wish to work with today:</p>${audioButtonHtml(`audio/${audioPrefix}_4.wav`)}`,
-        name: choiceName,
-        options: () => experimentData.memory_data.map(m => m[type]),
-        required: true
-      }],
-      on_load: attachAudioButton,
-      on_finish: data => {
-        const selected = data.response[choiceName];
-        experimentData[selectedIndexKey] = experimentData.memory_data.findIndex(m => m[type] === selected);
-      }
-    },
+   
   // START BUTTON
 {
   type: jsPsychHtmlButtonResponse,
   stimulus: `<p>If you are ready, please press the start button to see the reminder word or phrase.</p>
     ${audioButtonHtml("audio/start.wav")}`,
   choices: ['Start'],
-  on_load: attachAudioButton
+
+   on_load: attachAudioButton
+
 },
 
 // REMINDER DISPLAY
 {
   type: jsPsychHtmlButtonResponse,
-  stimulus: () => `
-    <div style="max-width: 600px; margin: auto; text-align: center; font-size: 18px;">
-      <p>${experimentData.memory_data[experimentData[selectedIndexKey]][type]}</p>
-      <p style="margin-top: 30px; font-style: italic; color: #555;">
-        Once you can clearly see the memory in your mind's eye please press the continue button.
-      </p>
-    </div>
-    ${audioButtonHtml("audio/continue.wav")}
-  `,
+  stimulus: () => {
+    const idx = experimentData[selectedIndexKey];
+
+    const reminderText = isTrauma
+      ? `Bring the associated intrusive memory to mind until you see it clearly. Once you can clearly see the memory in your mind’s eye please press the continue button.`
+      : `Bring the associated neutral memory to mind until you see it clearly. Once you can clearly see the memory in your mind’s eye please press the continue button.`;
+
+    return `
+      <div style="max-width: 600px; margin: auto; text-align: center; font-size: 18px;">
+        <p>${experimentData.memory_data[idx][type]}</p>
+        <p style="margin-top: 30px; font-style: italic; color: #555;">
+          ${reminderText}
+        </p>
+      </div>
+      ${audioButtonHtml(`audio/${audioPrefix}_4.wav`)}
+    `;
+  },
   choices: ['Continue'],
-  on_load: attachAudioButton,
-  on_finish: () => {
-    return new Promise((resolve) => {
-      const context = jsPsych.pluginAPI.audioContext();
-      if (context) {
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
 
-        oscillator.type = "sine";
-        oscillator.frequency.value = 440;
-        gain.gain.value = 0.2;
+  on_load: attachAudioButton
 
-        oscillator.connect(gain);
-        gain.connect(context.destination);
-
-        oscillator.start();
-        oscillator.stop(context.currentTime + 0.2);
-        oscillator.onended = () => resolve();
-      } else {
-        resolve();
-      }
-    });
-  }
 },
 
 // HANDOVER TO EXPERIMENTER
 instructionScreen(
   `<p>Please hand the computer back to the experimenter.</p>`,
-  "audio/hand_back.wav"
 ),
 
 // HAND BACK TO PARTICIPANT
 instructionScreen(
-  `<p>When ready, press any key and hand the computer back to the participant.</p>`
+  `<p>When ready, press any key and hand the computer back to the participant.</p>`,
 ),
 
 instructionScreen(
   `<p>Next, please complete the following questions about the memory</p>`,
-  "audio/next.wav"
+  null,
+  "If you are ready, please press any key to continue.",
 ),
 
 // PROMPT QUESTION
 {
   type: jsPsychSurveyText,
   questions: [{
-    prompt: `<p>"What was the reminder word/phrase you saw?"</p>
-      ${audioButtonHtml("audio/question_1.wav")}`,
+    prompt: '<p>"What was the reminder word/phrase you saw?"</p>',
     name: promptKey,
     required: true
   }],
-  on_load: attachAudioButton,
+
   on_finish: data => {
     experimentData[promptKey] = data.response[promptKey].trim();
   }
@@ -722,13 +784,12 @@ instructionScreen(
 {
   type: jsPsychSurveyMultiChoice,
   questions: [{
-    prompt: `<p>Did the word remind you of a traumatic memory or a neutral memory?</p>
-      ${audioButtonHtml("audio/question_2.wav")}`,
+    prompt: '<p>Did the word remind you of a traumatic memory or a neutral memory?</p>',
     name: reminderKey,
     options: ["Traumatic Memory", "Neutral Memory"],
     required: true
   }],
-  on_load: attachAudioButton,
+
   on_finish: data => {
     experimentData[reminderKey] = data.response[reminderKey];
   }
@@ -741,7 +802,6 @@ instructionScreen(
   <p>2) Positiveness-negativeness – was the memory associated with positive (good) or negative (bad) emotions, or neutral?</p>
   <p>3) Emotional intensity – how intense were your emotions when you recalled the memory?</p>
   `,
-  "audio/rating_2.wav"
 ),
 // VIVIDNESS
 buildLikertTrial({
@@ -749,7 +809,6 @@ buildLikertTrial({
   nameSuffix: "likert_vivid",
   prompt: `<p>How vivid was the memory?</p>
            <p>Vividness – how clear, detailed or crisp was the memory?</p>`,
-  audio: "audio/vivid.wav",
   labels: [
     '1<br><small>Not at all Vivid</small>',
     '2<br><small>A little Vivid</small>',
@@ -768,7 +827,6 @@ buildLikertTrial({
   nameSuffix: "likert_pos_neg",
   prompt: `<p>How Positive/Negative was the memory?</p>
            <p>Positiveness-negativeness – was the memory associated with positive or negative emotions, or neutral?</p>`,
-  audio: "audio/positive.wav",
   labels: [
     '1<br><small>Extremely Negative</small>',
     '2<br><small>Very Negative</small>',
@@ -787,7 +845,6 @@ buildLikertTrial({
   nameSuffix: "likert_intensity",
   prompt: `<p>How emotionally intense was the memory?</p>
            <p>Emotional intensity – how intense were your emotions?</p>`,
-  audio: "audio/intensity.wav",
   labels: [
     '1<br><small>Not at all Emotionally Intense</small>',
     '2<br><small>Slightly Emotionally Intense</small>',
@@ -800,7 +857,6 @@ buildLikertTrial({
   labelArray: likert_intensity_labels
 }),
 ];
-}
-
+};
 //  Start the flow
 startExperiment();
