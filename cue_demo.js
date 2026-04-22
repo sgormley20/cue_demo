@@ -630,7 +630,7 @@ function createMemoryBlock(type) {
       <p>You will then be asked to provide some ratings for the memory.</p>
     `
     : `
-      <p>When the reminder word appears, please bring the associated memory to mind until you see it clearly in your mind's eye.</p>
+      <p>When the reminder word or phrase appears, please bring the associated memory to mind until you see it clearly in your mind's eye.</p>
       <p>Hold the memory in your mind for a few seconds, before allowing it to fade away.</p>
       <p>You will then be asked to provide some ratings for the memory.</p>
     `;
